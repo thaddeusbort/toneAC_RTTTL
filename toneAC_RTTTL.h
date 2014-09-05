@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// toneAC_RTTTl Library - v1.0 - 10/26/2013
+// toneAC_RTTTl Library - v1.01 - 
 //
 // AUTHOR/LICENSE:
 // Created by Thaddeus Bort, Jr - https://github.com/thaddeusbort
@@ -54,17 +54,25 @@
 //       * rtttlSong  - Play a song with the notes and durations specified in the rtttl formatted char[]. Play once and turn off.
 //       * volume     - [optional] Set a volume level. (default: 10, range: 0 to 10 [0 = off])
 //       * background - [optional] Play song in background or pause application until finished? (default: false, value: true/false)
-//   stop()           - Stop playing.
-//   isSongPlaying()  - Return a bool for whether or not a song is playing
-//   setVolume( volume ) - Sets the volume of the speaker
+//   toneAC_stop()              - Stop playing.
+//   toneAC_togglePause()       - If playing, pause song. If paused, resume playing song.
+//   toneAC_isSongPlaying()     - Return a bool for whether or not a song is playing
+//   toneAC_setVolume( volume ) - Sets the volume of the speaker
 //     Parameters:
 //       * volume     - Set a volume level. (range: 0 to 10 [0 = off])
-  char* getSongName();
+//   toneAC_getSongName()       - Return the name of the song that is playing or "" if no song is playing
+//
 //
 // HISTORY:
+// 09/05/2014 toneAC_RTTTL v1.01 - Added variable to store song name and to 
+// return song name to main application for displaying. Added function for
+// pausing/resuming a song.
+//
 // 10/26/2013 toneAC_RTTTL v1.0 - modified library to support the RTTTL format.
 // Removed TONEAC_TINY because this version is not meant to be lightweight. If
 // you want the small footprint please use Tim Eckel's original library.
+//
+// -----------------------------------------------------------------------
 //
 // 01/27/2013 v1.2 - Fixed a counter error which went "over the top" and caused
 // periods of silence (thanks Krodal). For advanced users needing tight code,
@@ -114,13 +122,15 @@
     #define TIMSK1 TIMSK
   #endif
 
-  void playNote(unsigned long frequency = 0, uint8_t volume = 10, unsigned long length = 0, uint8_t background = false);
   void toneAC_RTTTL(char *p, uint8_t volume = 10, uint8_t background = false, uint8_t octave_offset = 0);
-  void noToneAC_RTTTL();
-  bool isSongPlaying();
-  void stopSong();
-  void setVolume(uint8_t volume);
-  char* getSongName();
+  
+  void toneAC_playNote(unsigned long frequency = 0, uint8_t volume = 10, unsigned long length = 0, uint8_t background = false);
+  void toneAC_stop();
+  void toneAC_togglePause();
+  void toneAC_setVolume(uint8_t volume);
+  
+  bool toneAC_isSongPlaying();
+  char *toneAC_getSongName();
 
   // define notes
   #define NOTE_B0  31

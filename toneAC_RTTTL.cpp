@@ -23,11 +23,12 @@ long _song_lengths[100];
 uint8_t _song_volume;
 uint8_t _note_index;
 bool _song_is_playing = false;
+char _song_name[20];
 
 #define isdigit(n) (n >= '0' && n <= '9')
 
 void toneAC_RTTTL(char *p, uint8_t volume, uint8_t background, uint8_t octave_offset) {
-  if (volume == 0) { stop(); return; } // If volume is 0, turn off sound and return.
+  if (volume == 0) { toneAC_stop(); return; } // If volume is 0, turn off sound and return.
   if (volume > 10) volume = 10;                              // Make sure volume is in range (1 to 10).
   _song_volume = volume;
   _song_is_playing = true;
@@ -41,9 +42,19 @@ void toneAC_RTTTL(char *p, uint8_t volume, uint8_t background, uint8_t octave_of
   int num;
   byte note;
   byte scale;
+  uint8_t song_index = 0;
 
+  // clear _song_name
+  while(song_index < 19) { // only go to 19, the 20th character is the null termination
+    _song_name[song_index++] = ' ';
+  }
+  song_index = 0;
   while(*p != ':') {
-    p++;    // ignore name
+    if(song_index < 19) { // only go to 19, the 20th character is the null termination
+      _song_name[song_index++] = *p++;
+    } else {
+      p++; // only saving the first 19 characters of the name, skip the rest
+    }
   }
   p++;                     // skip ':'
 
@@ -153,10 +164,10 @@ void toneAC_RTTTL(char *p, uint8_t volume, uint8_t background, uint8_t octave_of
   }
 
   _note_index = 0;
-  playNote(_song_frequencies[0], _song_volume, _song_lengths[0], true);
+  toneAC_playNote(_song_frequencies[0], _song_volume, _song_lengths[0], true);
 }
 
-void playNote(unsigned long frequency, uint8_t volume, unsigned long length, uint8_t background) {
+void toneAC_playNote(unsigned long frequency, uint8_t volume, unsigned long length, uint8_t background) {
   if(frequency == 0 || volume == 0) {
     if(background) {
       _t_time = millis() + length; // Set when the note should end.
@@ -189,10 +200,10 @@ void playNote(unsigned long frequency, uint8_t volume, unsigned long length, uin
   OCR1A  = OCR1B = duty;                // Set the duty cycle (volume).
   TCCR1A = _BV(COM1A1) | _BV(COM1B1) | _BV(COM1B0); // Inverted/non-inverted mode (AC).
 
-  if (length > 0 && !background) { delay(length); stop(); } // Just a simple delay, doesn't return control till finished.
+  if (length > 0 && !background) { delay(length); toneAC_stop(); } // Just a simple delay, doesn't return control till finished.
 }
 
-void stop() {
+void toneAC_stop() {
   TIMSK1 &= ~_BV(OCIE1A);     // Remove the timer interrupt.
   TCCR1B  = _BV(CS11);        // Default clock prescaler of 8.
   TCCR1A  = _BV(WGM10);       // Set to defaults so PWM can work like normal (PWM, phase corrected, 8bit).
@@ -209,12 +220,29 @@ void stop() {
   }
   _song_is_playing = false;
 }
+void toneAC_togglePause() {
+  if(_song_is_playing) {
+    TIMSK1 &= ~_BV(OCIE1A);     // Remove the timer interrupt.
+    TCCR1B  = _BV(CS11);        // Default clock prescaler of 8.
+    TCCR1A  = _BV(WGM10);       // Set to defaults so PWM can work like normal (PWM, phase corrected, 8bit).
+    PWMT1PORT &= ~_BV(PWMT1AMASK); // Set timer 1 PWM pins to LOW.
+    PWMT1PORT &= ~_BV(PWMT1BMASK); // Other timer 1 PWM pin also to LOW.
+  } else {
+    toneAC_playNote(_song_frequencies[_note_index], _song_volume, _song_lengths[_note_index], true);
+  }
+  _song_is_playing = !_song_is_playing;
+}
 
-bool isSongPlaying() {
+bool toneAC_isSongPlaying() {
   return _song_is_playing;
 }
-void setVolume(uint8_t volume) {
+void toneAC_setVolume(uint8_t volume) {
   _song_volume = volume > 10 ? 10 : volume;
+}
+char *toneAC_getSongName() {
+  if(toneAC_isSongPlaying())
+    return _song_name;
+  return "";
 }
 
 
@@ -225,10 +253,10 @@ ISR(TIMER1_COMPA_vect) { // Timer interrupt vector.
 
     // if there are more notes left to play in the song, play the next note
     if(_song_lengths[_note_index] > 0) {
-      playNote(_song_frequencies[_note_index], _song_volume, _song_lengths[_note_index], true);
+      toneAC_playNote(_song_frequencies[_note_index], _song_volume, _song_lengths[_note_index], true);
     } else {
       // the song is over, stop playing
-      stop();
+      toneAC_stop();
     }
   }
 }
